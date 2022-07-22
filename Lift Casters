@@ -1,0 +1,143 @@
+/*
+  OSF AUTOMATION
+  Lift Casters
+
+  Press a button once to lift scenic elements onto casters (extend).
+  Press again to lower scenic elements onto their frame (retract).
+  Press and hold button for three seconds ++ to 'home' the lifter towards their lowered state (retracted). 
+
+  Arduino Metro Mini
+  [QTY 4] Leadshine Microstep Driver, P/N DM322E
+  [QTY 4] NEMA 17 Stepper Motors w/ 40:1 Planetary Gearhead, P/N 14HS20-1504S-PG5
+  Power Source is Lithium ION 12vdc 50AH Rechargable Battery. 
+  See Drawing Package for mechanical details.
+
+  Created 22 July 2022
+  by Ryan B. Callahan
+  Head of Automation, Oregon Shakespeare Festival
+
+  Mechanical Design by James F. Dean Jr.
+  with Mechanical Design Revisions by Ryan B. Callahan 
+
+*/
+// constants won't change:
+const int buttonPin = 2;     // the number of the pushbutton pin
+const int enablePin = 3;     // the number of the enable pin to Stepper Drivers, wired in series
+const int optoPin = 4;       // the number of the opto pin to Stepper Drivers, wired in series
+const int directionPin = 5;  // the number of the direction pin to Stepper Drivers, wired in series
+const int mot1PulsePin = 6;  // the number of the pulse pin of the first Stepper Driver
+const int mot2PulsePin = 7;  // the number of the pulse pin of the second Stepper Driver
+const int mot3PulsePin = 8;  // the number of the pulse pin of the third Stepper Driver
+const int mot4PulsePin = 9;  // the number of the pulse pin of the fourth Stepper Driver
+
+// Variables will change:
+int enableState = LOW;       // the starting state of the enable pin [disabled]
+int directionState = LOW;    // the starting state of the direction pin [retract]
+int optoState = HIGH;        // the opto pin is always HIGH for V reference
+int buttonState;             // the current reading from the button pin
+int lastButtonState = LOW;   // the previous reading from the button pin
+int m1PulseState = LOW;      // the starting state of the pulse pin for m1
+int m2PulseState = LOW;      // the starting state of the pulse pin for m1
+int m3PulseState = LOW;      // the starting state of the pulse pin for m1
+int m4PulseState = LOW;      // the starting state of the pulse pin for m1
+int i;                       // the variable for counting step cycles in a motion.
+unsigned long event = 3000;  // how many seconds to press the button for to enter 'homing mode'
+unsigned long buttonPushed =0;
+
+// Motion parameters:
+int travelSpeed = 200;       // the millisecond interval between steps in normal operation
+int homeSpeed = 300;         // the millisecond interval between steps in homing operation, typically a little slower
+int travelDist = 32765;      // the number of motor step cycles in a move
+
+void setup() {
+
+pinMode(buttonPin,INPUT);   
+pinMode(enablePin,OUTPUT);
+pinMode(directionPin,OUTPUT);
+pinMode(mot1PulsePin,OUTPUT);
+pinMode(mot2PulsePin,OUTPUT);
+pinMode(mot3PulsePin,OUTPUT);
+pinMode(mot4PulsePin,OUTPUT);
+  
+}
+
+void loop() {
+ 
+   buttonState=digitalRead(buttonPin);
+
+  if (lastButtonState==1 && buttonState==0){
+    if (directionState==0) {                    // Going Up [extending] - Normal Operation
+      digitalWrite(directionPin, HIGH);
+      directionState=1;
+      digitalWrite(enablePin, HIGH);
+         for (int i = 1; i <= travelDist; i=i+1) {
+       digitalWrite(mot1PulsePin,HIGH);
+       digitalWrite(mot2PulsePin,HIGH);
+       digitalWrite(mot3PulsePin,HIGH);
+       digitalWrite(mot4PulsePin,HIGH);
+       delayMicroseconds(travelSpeed);
+       digitalWrite(mot1PulsePin,LOW);
+       digitalWrite(mot2PulsePin,LOW);
+       digitalWrite(mot3PulsePin,LOW);
+       digitalWrite(mot4PulsePin,LOW);
+       delayMicroseconds(travelSpeed);
+         }
+         delay(10);
+         buttonPushed=0;
+      } else {                                  // Going Down [retracting] - Normal Operation
+      digitalWrite(directionPin, LOW);
+      directionState=0;
+         for (int i = 1; i <= travelDist; i=i+1) {
+       digitalWrite(mot1PulsePin,HIGH);
+       digitalWrite(mot2PulsePin,HIGH);
+       digitalWrite(mot3PulsePin,HIGH);
+       digitalWrite(mot4PulsePin,HIGH);
+       delayMicroseconds(travelSpeed);
+       digitalWrite(mot1PulsePin,LOW);
+       digitalWrite(mot2PulsePin,LOW);
+       digitalWrite(mot3PulsePin,LOW);
+       digitalWrite(mot4PulsePin,LOW);
+       delayMicroseconds(travelSpeed);
+      }
+      delay(10);
+      buttonPushed=0;
+      digitalWrite(enablePin, LOW);
+      }
+      }
+      lastButtonState=buttonState;
+      delay(10);
+
+
+  // Homing Routine
+  
+     if (buttonState == HIGH && buttonPushed == 0) {
+        buttonPushed=millis();
+     }
+      if( buttonState ==HIGH &&  buttonPushed >0 ) {
+        unsigned long difference = millis()- buttonPushed;
+        if( difference >= event){
+          digitalWrite(enablePin,HIGH);
+          digitalWrite(directionPin,LOW);
+          directionState=0;
+          while (digitalRead(buttonPin)==HIGH) {
+            digitalWrite(mot1PulsePin,HIGH);
+            digitalWrite(mot2PulsePin,HIGH);
+            digitalWrite(mot3PulsePin,HIGH);
+            digitalWrite(mot4PulsePin,HIGH);
+            delayMicroseconds(homeSpeed);
+            digitalWrite(mot1PulsePin,LOW);
+            digitalWrite(mot2PulsePin,LOW);
+            digitalWrite(mot3PulsePin,LOW);
+            digitalWrite(mot4PulsePin,LOW);
+            delayMicroseconds(homeSpeed);
+            }
+         delay(100);
+         buttonPushed=0;
+         delay(100);
+         lastButtonState=0;
+         delay(100);
+         digitalWrite(enablePin,LOW);
+        }
+       
+     }
+}
